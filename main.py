@@ -91,12 +91,21 @@ def secure_data(request: SecureQueryRequest):
             if query_type in {"SELECT", "SHOW", "DESCRIBE", "EXPLAIN"}:
                 rows = [dict(zip(result.keys(), row)) for row in result]
                 return {"rows": rows, "user_id": user_id, "expiry": expiry}
-            else:
-                return {
-                    "message": f"{query_type} executed successfully.",
-                    "user_id": user_id,
-                    "expiry": expiry
-                }
+            
+            response = {
+                "message": f"{query_type} executed successfully.",
+                "user_id": user_id,
+                "expiry": expiry
+            }
+
+            # Capture last insert ID if applicable
+            if query_type == "INSERT":
+                last_id_result = connection.execute(text("SELECT LAST_INSERT_ID()"))
+                last_insert_id = last_id_result.scalar()
+                if last_insert_id:
+                    response["last_insert_id"] = last_insert_id
+
+            return response
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e.__cause__ or e))
     
