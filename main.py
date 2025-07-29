@@ -84,8 +84,19 @@ def secure_data(request: SecureQueryRequest):
     try:
         with engine.connect() as connection:
             result = connection.execute(text(query))
-            rows = [dict(zip(result.keys(), row)) for row in result]
-            return {"rows": rows, "user_id": user_id, "expiry": expiry}
+
+            # Check the type of query (e.g., SELECT vs. INSERT/UPDATE/DELETE)
+            query_type = query.split()[0].upper()
+
+            if query_type in {"SELECT", "SHOW", "DESCRIBE", "EXPLAIN"}:
+                rows = [dict(zip(result.keys(), row)) for row in result]
+                return {"rows": rows, "user_id": user_id, "expiry": expiry}
+            else:
+                return {
+                    "message": f"{query_type} executed successfully.",
+                    "user_id": user_id,
+                    "expiry": expiry
+                }
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e.__cause__ or e))
     
