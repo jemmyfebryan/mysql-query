@@ -1,9 +1,9 @@
 # Makefile for FastAPI Docker project
 
 # Variables
-IMAGE_NAME=orinai-db-app
+IMAGE_NAME=mysql-db-app
 PORT=8085
-CONTAINER_NAME=orinai-db-container
+CONTAINER_NAME=mysql-db-container
 
 .PHONY: build run stop remove logs shell
 
