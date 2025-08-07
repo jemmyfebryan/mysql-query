@@ -3,7 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from pydantic import BaseModel
-from sqlalchemy import create_engine, text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 import re
 import os
@@ -26,8 +27,9 @@ DB_CONFIG = {
     "database": os.getenv("MYSQL_DB"),
 }
 
-DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
-engine = create_engine(
+# Use async driver (aiomysql) and create async engine
+DATABASE_URL = f"mysql+aiomysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
+engine = create_async_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=3600
@@ -37,53 +39,54 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
-def serve_ui(request: Request):
+async def serve_ui(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 class QueryRequest(BaseModel):
     query: str
+    params: dict = None  # Optional parameters for parameterized queries
 
 @app.post("/query")
-def run_query(request: QueryRequest):
+async def run_query(request: QueryRequest):
     query = request.query.strip()
+    params = request.params or {}
     
-    logger.info(f"A user the DB, query: {query}")
+    logger.info(f"A user accessed the DB, query: {query} with params: {params}")
 
     allowed_statements = ("SELECT", "SHOW", "DESCRIBE", "EXPLAIN", "WITH")
     if not query.upper().startswith(allowed_statements):
         raise HTTPException(status_code=403, detail="Only read-only queries are allowed.")
 
     try:
-        with engine.connect() as connection:
-            result = connection.execute(text(query))
+        async with engine.connect() as connection:
+            result = await connection.execute(text(query), params)
             rows = [dict(zip(result.keys(), row)) for row in result]
             return {"rows": rows}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e.__cause__ or e))
 
-@app.get("/")
-def root():
-    return {"message": "Use /query endpoint with POST (SELECT)"}
 
 # API Key Test
 # Payload model including API key
 class SecureQueryRequest(BaseModel):
     api_key: str
     query: str  # your actual data field
+    params: dict = None  # Optional parameters for parameterized queries
 
 @app.post("/secure_query")
-def secure_data(request: SecureQueryRequest):
+async def secure_data(request: SecureQueryRequest):
     verify_dict = verify_api_key(request.api_key)
     user_id = verify_dict.get("user_id")
     expiry = verify_dict.get("expiry")
     
     query = request.query.strip()
+    params = request.params or {}
     
-    logger.warning(f"User ID: {user_id} (exp in {expiry}) access the DB, query: {query}")
+    logger.warning(f"User ID: {user_id} (exp in {expiry}) accessed the DB, query: {query} with params: {params}")
 
     try:
-        with engine.connect() as connection:
-            result = connection.execute(text(query))
+        async with engine.connect() as connection:
+            result = await connection.execute(text(query), params)
 
             # Check the type of query (e.g., SELECT vs. INSERT/UPDATE/DELETE)
             query_type = query.split()[0].upper()
@@ -100,7 +103,7 @@ def secure_data(request: SecureQueryRequest):
 
             # Capture last insert ID if applicable
             if query_type == "INSERT":
-                last_id_result = connection.execute(text("SELECT LAST_INSERT_ID()"))
+                last_id_result = await connection.execute(text("SELECT LAST_INSERT_ID()"))
                 last_insert_id = last_id_result.scalar()
                 if last_insert_id:
                     response["last_insert_id"] = last_insert_id
