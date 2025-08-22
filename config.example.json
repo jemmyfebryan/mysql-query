@@ -1,0 +1,18 @@
+{
+    "mysql": [
+        {
+            "NAME": "Endpoint name 1",
+            "MYSQL_DB": "Database Name",
+            "MYSQL_HOST": "Database IP Address",
+            "MYSQL_USER": "User name for connection",
+            "MYSQL_PASS": "User password for connection"
+        },
+        {
+            "NAME": "Endpoint name 2",
+            "MYSQL_DB": "Database 2 Name",
+            "MYSQL_HOST": "Database 2 IP Address",
+            "MYSQL_USER": "User name for connection",
+            "MYSQL_PASS": "User password for connection"
+        }
+    ]
+}
