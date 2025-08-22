@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.api_key import verify_api_key
-from core.models import QueryRequest, SecureQueryRequest
+from core.models import SecureQueryRequest
 from core.register_connection import register_mysql_endpoint
 from core.logger import get_logger
 
