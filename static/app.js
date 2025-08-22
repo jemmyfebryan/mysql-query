@@ -82,3 +82,8 @@ function downloadCSV() {
   const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
   saveAs(blob, "query_results.csv");
 }
+
+// Expose functions to global scope so HTML onclick works
+window.runQuery = runQuery;
+window.downloadCSV = downloadCSV;
+window.toggleTheme = toggleTheme;
