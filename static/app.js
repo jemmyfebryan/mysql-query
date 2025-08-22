@@ -13,16 +13,21 @@ function toggleTheme() {
   document.documentElement.classList.toggle("dark");
 }
 
+function getEndpoint() {
+  return document.getElementById("endpoint").value || "/query";
+}
+
 async function runQuery() {
   const query = editor.getValue();
   const errorBox = document.getElementById("error");
   const resultsBox = document.getElementById("results");
+  const endpoint = getEndpoint();
 
   errorBox.textContent = "Loading...";
   resultsBox.innerHTML = "";
 
   try {
-    const response = await fetch("/query", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
@@ -30,7 +35,7 @@ async function runQuery() {
 
     const data = await response.json();
 
-    if (!response.ok) throw new Error(data.detail);
+    if (!response.ok) throw new Error(data.detail || response.statusText);
 
     if (!data.rows.length) {
       errorBox.textContent = "✅ Query executed successfully. No results.";
@@ -77,4 +82,3 @@ function downloadCSV() {
   const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
   saveAs(blob, "query_results.csv");
 }
-
