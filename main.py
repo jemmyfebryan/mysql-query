@@ -5,8 +5,9 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
+from sqlalchemy.engine import URL
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.api_key import verify_api_key
@@ -37,20 +38,38 @@ if os.path.exists("config.json"):
         config = json.load(f)
 
     for db_cfg in config.get("mysql", []):
-        conn_str = (
-            f"mysql+aiomysql://{db_cfg['MYSQL_USER']}:{db_cfg['MYSQL_PASS']}"
-            f"@{db_cfg['MYSQL_HOST']}/{db_cfg['MYSQL_DB']}"
+        # conn_str = (
+        #     f"mysql+aiomysql://{db_cfg['MYSQL_USER']}:{db_cfg['MYSQL_PASS']}"
+        #     f"@{db_cfg['MYSQL_HOST']}/{db_cfg['MYSQL_DB']}"
+        # )
+        conn_url = URL.create(
+            drivername="mysql+aiomysql",
+            username=db_cfg["MYSQL_USER"],
+            password=db_cfg["MYSQL_PASS"],            # raw password; URL handles escaping
+            host=db_cfg["MYSQL_HOST"],
+            port=int(db_cfg.get("MYSQL_PORT", 3306)) if db_cfg.get("MYSQL_PORT") else None,
+            database=db_cfg["MYSQL_DB"],
         )
+        
         cfg_name = db_cfg["NAME"]
         engines[f"/mysql/{cfg_name}"] = create_async_engine(
-            conn_str,
+            conn_url,
             pool_pre_ping=True,
             pool_recycle=3600,
             echo=False
         )
 
 # Use async driver (aiomysql) and create async engine
-DATABASE_URL = f"mysql+aiomysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
+# DATABASE_URL = f"mysql+aiomysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
+DATABASE_URL = URL.create(
+    drivername="mysql+aiomysql",
+    username=DB_CONFIG['user'],
+    password=DB_CONFIG['password'],            # raw password; URL handles escaping
+    host=DB_CONFIG['host'],
+    port=int(DB_CONFIG.get("port", 3306)) if DB_CONFIG.get("port") else None,
+    database=DB_CONFIG['database'],
+)
+
 single_db_engine = create_async_engine(
     DATABASE_URL,
     pool_pre_ping=True,
