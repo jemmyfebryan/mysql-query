@@ -1,10 +1,13 @@
 import os
 import json
+import base64
+from typing import Optional
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -21,6 +24,64 @@ load_dotenv(override=True)
 logger = get_logger(__name__)
 
 app = FastAPI()
+
+# HTTP Basic Auth Configuration
+ACCESS_CREDENTIAL = os.getenv("ACCESS_CREDENTIAL")
+AUTH_REALM = "MySQL Query Service"
+STATIC_DIR = Path("static")
+
+async def verify_basic_auth(request: Request) -> Optional[None]:
+    """Verify HTTP Basic Authentication for all requests."""
+    if not ACCESS_CREDENTIAL:
+        # No password required if ACCESS_PASSWORD is not set
+        return None
+    
+    access_username, access_password = ACCESS_CREDENTIAL.split(sep=":")
+
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": f'Basic realm="{AUTH_REALM}"'},
+        )
+
+    if not auth_header.startswith("Basic "):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication type",
+            headers={"WWW-Authenticate": f'Basic realm="{AUTH_REALM}"'},
+        )
+
+    try:
+        encoded_credentials = auth_header.split(" ")[1]
+        decoded_credentials = base64.b64decode(encoded_credentials).decode("utf-8")
+        username, password = decoded_credentials.split(":", 1)
+
+        # Verify password (username is ignored, only password matters)
+        if username != access_username or password != access_password:
+            logger.warning(f"Failed authentication attempt from user: {username}")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid password",
+                headers={"WWW-Authenticate": f'Basic realm="{AUTH_REALM}"'},
+            )
+
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials format",
+            headers={"WWW-Authenticate": f'Basic realm="{AUTH_REALM}"'},
+        )
+
+@app.get("/static/{file_path:path}", dependencies=[Depends(verify_basic_auth)])
+async def serve_static(file_path: str):
+    """Serve static files with authentication."""
+    file_path = STATIC_DIR / file_path
+    if file_path.is_file():
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="File not found")
 
 # DB Registration Configuration
 ## Single DB Connection
@@ -76,15 +137,16 @@ single_db_engine = create_async_engine(
     pool_recycle=3600
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/")
+@app.get("/", dependencies=[Depends(verify_basic_auth)])
 async def serve_ui(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 # Register Single DB Connection
-register_mysql_endpoint(app, "/query", single_db_engine)
+# Only require auth if ACCESS_PASSWORD is set
+auth_dep = verify_basic_auth if ACCESS_CREDENTIAL else None
+register_mysql_endpoint(app, "/query", single_db_engine, auth_dependency=auth_dep)
 
 @app.post("/secure_query")
 async def secure_data(request: SecureQueryRequest):
@@ -128,4 +190,4 @@ async def secure_data(request: SecureQueryRequest):
 # Multi DB Connections
 ## Register endpoints dynamically from config.json
 for name, engine in engines.items():
-    register_mysql_endpoint(app, name, engine)
+    register_mysql_endpoint(app, name, engine, auth_dependency=auth_dep)

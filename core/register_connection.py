@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
@@ -9,12 +9,12 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-def register_mysql_endpoint(app: FastAPI, db_name: str, engine):
+def register_mysql_endpoint(app: FastAPI, db_name: str, engine, auth_dependency=None):
     """
     Dynamically register endpoints like /mysql/{db_name}
     """
 
-    @app.post(f"{db_name}")
+    @app.post(f"{db_name}", dependencies=[Depends(auth_dependency)] if auth_dependency else [])
     async def run_query(request: QueryRequest):
         query = request.query.strip()
         params = request.params or {}
