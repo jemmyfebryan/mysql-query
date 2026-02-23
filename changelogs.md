@@ -5,7 +5,21 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ---
 
-## [Unreleased]
+## [1.3.0] - 2026-02-23
+### Added
+- Add support for Microsoft SQL Database (MSSQL).
+
+### Changed
+- Update `.config.example.json` for Microsoft SQL Database configuration.
+
+---
+
+## [1.2.0] - 2026-02-09
+### Added
+- Add user password credential when try to query (see .env.example).
+
+### Changed
+- Update `.env.example` for password manager.
 
 ---
 

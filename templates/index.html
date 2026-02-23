@@ -31,6 +31,19 @@
              class="px-3 py-2 rounded bg-gray-800 border border-gray-700 w-full" />
     </div>
 
+    <!-- API Key Input -->
+    <div class="flex items-center gap-3">
+      <label for="api_key" class="text-sm">API Key (for Secure Mode - INSERT/UPDATE/DELETE):</label>
+      <input id="api_key" type="password" placeholder="Enter API key for secure queries..."
+             class="px-3 py-2 rounded bg-gray-800 border border-gray-700 w-full"
+             oninput="updateModeIndicator()" />
+    </div>
+
+    <!-- Mode Indicator -->
+    <div id="mode-indicator" class="text-sm px-3 py-2 rounded bg-green-800 border border-green-700">
+      🔓 Public Mode (Read-only: SELECT, SHOW, DESCRIBE, EXPLAIN)
+    </div>
+
     <!-- SQL Editor -->
     <div class="h-60 border border-gray-700 rounded overflow-hidden">
       <div id="editor" class="h-full"></div>

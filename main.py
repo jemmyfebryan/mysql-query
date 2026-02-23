@@ -119,6 +119,30 @@ if os.path.exists("config.json"):
             pool_recycle=3600,
             echo=False
         )
+        
+    for db_cfg in config.get("mssql", []):
+        # 1. Create the MSSQL URL
+        conn_url = URL.create(
+            drivername="mssql+aioodbc",
+            username=db_cfg["MSSQL_USER"],
+            password=db_cfg["MSSQL_PASS"],            # raw password; URL handles escaping
+            host=db_cfg["MSSQL_HOST"],
+            port=int(db_cfg.get("MSSQL_PORT", 1433)) if db_cfg.get("MSSQL_PORT") else None,
+            database=db_cfg["MSSQL_DB"],
+            query=db_cfg["QUERY"],
+        )
+        
+        cfg_name = db_cfg["NAME"]
+        
+        # 2. Create the Async Engine
+        # Note: MSSQL handles connection pooling slightly differently, 
+        # but pool_pre_ping is still highly recommended.
+        engines[f"/mssql/{cfg_name}"] = create_async_engine(
+            conn_url,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            echo=False
+        )
 
 # Use async driver (aiomysql) and create async engine
 # DATABASE_URL = f"mysql+aiomysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"

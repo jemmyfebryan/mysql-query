@@ -1,18 +1,35 @@
 {
     "mysql": [
         {
-            "NAME": "Endpoint name 1",
+            "NAME": "endpoint_1",
             "MYSQL_DB": "Database Name",
             "MYSQL_HOST": "Database IP Address",
             "MYSQL_USER": "User name for connection",
             "MYSQL_PASS": "User password for connection"
         },
         {
-            "NAME": "Endpoint name 2",
+            "NAME": "endpoint_2",
             "MYSQL_DB": "Database 2 Name",
             "MYSQL_HOST": "Database 2 IP Address",
+            "MYSQL_PORT": "Database PORT, default to 3306",
             "MYSQL_USER": "User name for connection",
             "MYSQL_PASS": "User password for connection"
+        }
+    ],
+    "mssql": [
+        {
+            "NAME": "endpoint_3",
+            "MSSQL_DB": "Database 3 Name",
+            "MSSQL_HOST": "Database 3 IP Address",
+            "MYSQL_PORT": "Database PORT, default to 1433",
+            "MSSQL_USER": "User name for connection",
+            "MSSQL_PASS": "User password for connection",
+            "QUERY": {
+                "driver": "ODBC Driver 17 for SQL Server",
+                "TrustServerCertificate": "yes",
+                "Encrypt": "yes",
+                "LongAsMax": "yes"
+            }
         }
     ]
 }
